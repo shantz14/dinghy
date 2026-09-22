@@ -1,0 +1,30 @@
+# Build output
+/bin/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+
+# Rust (ballast/)
+ballast/target/
+**/*.rs.bk
+*.pdb
+
+# Local config / secrets
+config.yaml
+config.yml
+*.local.yaml
+.env
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
