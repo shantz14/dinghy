@@ -1,0 +1,44 @@
+syntax = "proto3";
+package hold;
+
+service KVService {
+  rpc Get (GetRequest) returns (GetReply);
+  rpc Put (PutRequest) returns (PutReply);
+  rpc Delete (DeleteRequest) returns (DeleteReply);
+  rpc List (ListRequest) returns (ListReply);
+}
+
+message GetRequest {
+  bytes key = 1;
+}
+
+message PutRequest {
+  bytes key = 1;
+  bytes value = 2;
+}
+
+message DeleteRequest {
+  bytes key = 1;
+}
+
+message ListRequest {
+  bytes prefix = 1;
+}
+
+message GetReply {
+  KeyValue kv = 1;
+}
+
+message PutReply {}
+
+message DeleteReply {}
+
+message KeyValue {
+  bytes key = 1;
+  bytes value = 2;
+}
+
+message ListReply {
+  repeated KeyValue list = 1;
+}
+

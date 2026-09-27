@@ -12,8 +12,8 @@
 go.work
 go.work.sum
 
-# Rust (ballast/)
-ballast/target/
+# Rust (hold/)
+hold/target/
 **/*.rs.bk
 *.pdb
 
