@@ -47,7 +47,6 @@ impl KvService for MyKvService {
         println!("Got a request: {:?}", request);
 
         let reply = GetReply {
-            // TODO implement
             kv: self.store.lock().unwrap().get(request.into_inner().key)
         };
 
@@ -87,7 +86,6 @@ impl KvService for MyKvService {
         println!("Got a request: {:?}", request);
 
         let reply = ListReply {
-            //TODO implement
             list: self.store.lock().unwrap().range(request.into_inner().prefix),
         };
 

@@ -1,13 +1,14 @@
-use std::{collections::BTreeMap, fs::{self, File, OpenOptions}, io};
+use std::{collections::BTreeMap, fs::{self, File, OpenOptions}, io, path::PathBuf};
 use std::path::Path;
 
-use crate::{server::hold::KeyValue, wal::{self, WalRecord}};
+use crate::{server::hold::KeyValue, snapshot::load_latest_snapshot, wal::{self, WalRecord}};
 
 #[derive(Debug)]
 pub struct Store {
     pub map: BTreeMap<Vec<u8>, Vec<u8>>,
     pub revision: u64,
     pub wal_fd: File,
+    pub data_dir: PathBuf,
 }
 
 impl Store {
@@ -15,17 +16,36 @@ impl Store {
         // Open the WAL file
         fs::create_dir_all(&data_dir)?;
         let wal_path = data_dir.join("0000000000000001.wal");
-
-        let file = OpenOptions::new()
+        let wal_fd = OpenOptions::new()
             .append(true)
             .create(true) 
             .open(&wal_path)?;
             // TODO segmented WAL files
-        let mut store = Self {
-            map: BTreeMap::new(),
-            revision: 0,
-            wal_fd: file,
+
+        // Create the snapshot folder if it doesn't exist
+        fs::create_dir_all(&data_dir.join("snap"))?;
+
+        // Load latest snapshot if it exists
+        let revision: u64;
+        let map: BTreeMap<Vec<u8>, Vec<u8>>;
+        match load_latest_snapshot(data_dir)? {
+            Some(snapshot) => {
+                revision = snapshot.revision;
+                map = snapshot.entries;
+            }
+            None => {
+                revision = 0;
+                map = BTreeMap::new();
+            }
         };
+
+        let mut store = Self {
+            map: map,
+            revision: revision,
+            wal_fd: wal_fd,
+            data_dir: data_dir.to_path_buf(),
+        };
+
         store.restore(&wal_path)?;
 
         Ok(store)
