@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, fs::{self, File, OpenOptions, read_dir}, io, path::{Path, PathBuf}};
+use std::{collections::BTreeMap, ffi::OsStr, fs::{self, File, OpenOptions, read_dir}, io::{self, Write}, path::{Path, PathBuf}};
 
 use bincode::deserialize;
 use crc32fast::hash;
@@ -36,11 +36,12 @@ impl Store {
 
         // Create snapshot file
         let snap_path = self.data_dir.join(SNAPSHOT_FOLDER).join(format!("{:016}.snap.tmp", self.revision));
-        let file = OpenOptions::new()
+        let mut file = OpenOptions::new()
             .write(true)
             .truncate(true)
             .create(true) 
             .open(&snap_path)?;
+        file.write_all(&snapshot)?;
         file.sync_data()?;
         fs::rename(&snap_path, self.data_dir.join(SNAPSHOT_FOLDER).join(format!("{:016}.snap", self.revision)))?;
         let dir = File::open(self.data_dir.join(SNAPSHOT_FOLDER))?;
@@ -58,7 +59,7 @@ pub fn load_latest_snapshot(data_dir: &Path) -> io::Result<Option<Snapshot>> {
         .filter_map(|res| res.ok())
         .map(|entry| entry.path())
         .filter(|path| path.is_file())
-        .filter(|path| path.ends_with(".snap"))
+        .filter(|path| path.extension() == Some(OsStr::new("snap")))
         .collect();
 
     if snapshots.is_empty() {

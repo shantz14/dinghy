@@ -25,9 +25,11 @@ impl Store {
         let log_len = self.wal_fd.metadata()?.len();
         if let Err(e) = self.wal_fd.write_all(&frame) {
             self.wal_fd.set_len(log_len).expect(&format!("a write to the WAL failed and the file could not be truncated: {}", e));
+            return Err(e);
         }
         if let Err(e) = self.wal_fd.sync_data() {
             self.wal_fd.set_len(log_len).expect(&format!("sync_data after a WAL write failed and the file could not be truncated: {}", e));
+            return Err(e);
         }
 
         self.revision += 1;
@@ -52,12 +54,16 @@ impl Store {
             // add to map
             match record {
                 WalRecord::Put { revision, key, value } => {
-                    self.map.insert(key, value);
-                    self.revision = revision;
+                    if revision > self.revision {
+                        self.map.insert(key, value);
+                        self.revision = revision;
+                    }
                 },
                 WalRecord::Delete { revision, key } => {
-                    self.map.remove(&key);
-                    self.revision = revision;
+                    if revision > self.revision {
+                        self.map.remove(&key);
+                        self.revision = revision;
+                    }
                 }
             }
 
