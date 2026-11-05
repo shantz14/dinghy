@@ -54,12 +54,14 @@ impl Store {
             // add to map
             match record {
                 WalRecord::Put { revision, key, value } => {
+                    // skip revisions already in the map (loaded from snapshot)
                     if revision > self.revision {
                         self.map.insert(key, value);
                         self.revision = revision;
                     }
                 },
                 WalRecord::Delete { revision, key } => {
+                    // skip revisions already in the map (loaded from snapshot)
                     if revision > self.revision {
                         self.map.remove(&key);
                         self.revision = revision;
