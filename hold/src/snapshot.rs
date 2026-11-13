@@ -82,10 +82,14 @@ pub fn load_latest_snapshot(data_dir: &Path) -> io::Result<Option<Snapshot>> {
 
 fn is_valid_snapshot(snap_path: &PathBuf) -> io::Result<Option<Snapshot>> {
     let bytes: Vec<u8> = fs::read(snap_path)?;
-    let checksum = &bytes[..4];
-    let snapshot = &bytes[5..];
 
-    if hash(checksum) != hash(snapshot) {
+    let Some(checksum_bytes) = bytes.get(..4) else {
+        return Ok(None)
+    };
+    let checksum = u32::from_le_bytes(checksum_bytes.try_into().unwrap());
+    let snapshot = &bytes[4..];
+
+    if checksum != hash(snapshot) {
         return Ok(None);
     }
 

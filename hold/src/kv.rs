@@ -3,12 +3,15 @@ use std::path::Path;
 
 use crate::{server::hold::KeyValue, snapshot::load_latest_snapshot, wal::{self, WalRecord}};
 
+const TRIGGER: u8 = 5;
+
 #[derive(Debug)]
 pub struct Store {
     pub map: BTreeMap<Vec<u8>, Vec<u8>>,
     pub revision: u64,
     pub wal_fd: File,
     pub data_dir: PathBuf,
+    writes_since_snap: u8,
 }
 
 impl Store {
@@ -44,6 +47,7 @@ impl Store {
             revision: revision,
             wal_fd: wal_fd,
             data_dir: data_dir.to_path_buf(),
+            writes_since_snap: 0,
         };
 
         store.restore(&wal_path)?;
@@ -65,12 +69,18 @@ impl Store {
     pub fn put(&mut self, key: Vec<u8>, value: Vec<u8>) -> io::Result<u64> {
         self.wal_log(WalRecord::Put { revision: self.revision+1, key: key.clone(), value: value.clone() })?;
         self.map.insert(key, value);
+
+        self.writes_since_snap += 1;
+        self.try_snapshot()?;
         Ok(self.revision)
     }
 
     pub fn delete(&mut self, key: Vec<u8>) -> io::Result<u64> {
         self.wal_log(WalRecord::Delete { revision: self.revision+1, key: key.clone() })?;
         self.map.remove(&key);
+
+        self.writes_since_snap += 1;
+        self.try_snapshot()?;
         Ok(self.revision)
     }
 
@@ -83,6 +93,18 @@ impl Store {
                 value: v.clone(),
             })
             .collect()
+    }
+
+    /// Checks if a snapshot should be triggered and triggers a snapshot if need be
+    /// Resets trigger vars if one is triggered (e.g., writes_since_snap = 0)
+    fn try_snapshot(&mut self) -> io::Result<()> {
+        if self.writes_since_snap >= TRIGGER {
+            self.take_snapshot()?;
+            self.writes_since_snap = 0;
+
+            //self.rotate_wal()?;
+        }
+        Ok(())
     }
 
 }

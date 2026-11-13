@@ -71,9 +71,13 @@ impl Store {
 
             offset += 8 + length;
         }
-        self.wal_fd.set_len(offset as u64)?;
+        self.wal_fd.set_len(offset as u64)?; // Truncate any torn data after a break
 
         Ok(())
+    }
+
+    pub fn rotate_wal(&mut self) -> io::Result<()> {
+        todo!()
     }
 }
 
